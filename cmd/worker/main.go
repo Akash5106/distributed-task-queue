@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/Akash5106/distributed-task-queue/internal/queue"
-	"github.com/Akash5106/distributed-task-queue/internal/task"
+	"github.com/Akash5106/distributed-task-queue/internal/server"
 	"github.com/Akash5106/distributed-task-queue/internal/worker"
 )
 
@@ -22,29 +20,9 @@ func main() {
 		ID:    3,
 		Queue: q,
 	}
-	t := task.Task{
-		ID:      1,
-		Payload: "send email",
-	}
-	t2 := task.Task{
-		ID:      2,
-		Payload: "send message",
-	}
-	t3 := task.Task{
-		ID:      3,
-		Payload: "open youtube",
-	}
-	t4 := task.Task{
-		ID:      4,
-		Payload: "open google",
-	}
-	q.Enqueue(t)
-	q.Enqueue(t2)
-	q.Enqueue(t3)
-	q.Enqueue(t4)
+	s := server.NewServer(q)
 	go w1.Start()
 	go w2.Start()
 	go w3.Start()
-	select {}
-	fmt.Println("Main ends")
+	s.Start()
 }
