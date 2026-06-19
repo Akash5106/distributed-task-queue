@@ -12,6 +12,8 @@ type Worker struct {
 }
 
 func (w *Worker) Start() {
-	t := <-w.Queue.Tasks
-	fmt.Printf("ID : %v and Payload : %v", t.ID, t.Payload)
+	for {
+		t := <-w.Queue.Tasks
+		fmt.Printf("Worker : %v ID : %v and Payload : %v\n", w.ID, t.ID, t.Payload)
+	}
 }
