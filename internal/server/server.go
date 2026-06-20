@@ -6,18 +6,18 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Akash5106/distributed-task-queue/internal/queue"
+	"github.com/Akash5106/distributed-task-queue/internal/storage"
 	"github.com/Akash5106/distributed-task-queue/internal/task"
 )
 
 type Server struct {
+	Redis *storage.RedisClient
 	ID    int
-	Queue *queue.Queue
 }
 
-func NewServer(q *queue.Queue) *Server {
+func NewServer(redis *storage.RedisClient) *Server {
 	return &Server{
-		Queue: q,
+		Redis: redis,
 	}
 }
 
@@ -46,7 +46,11 @@ func (s *Server) HandleTasks(w http.ResponseWriter, r *http.Request) {
 		Payload: req.Payload,
 	}
 	s.ID++
-	s.Queue.Enqueue(t)
+	err = s.Redis.PushTask(r.Context(), t)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(t)

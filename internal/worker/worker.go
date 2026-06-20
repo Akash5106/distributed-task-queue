@@ -1,19 +1,23 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/Akash5106/distributed-task-queue/internal/queue"
+	"github.com/Akash5106/distributed-task-queue/internal/storage"
 )
 
 type Worker struct {
+	Redis *storage.RedisClient
 	ID    int
-	Queue *queue.Queue
 }
 
 func (w *Worker) Start() {
 	for {
-		t := <-w.Queue.Tasks
-		fmt.Printf("Worker : %v ID : %v and Payload : %v\n", w.ID, t.ID, t.Payload)
+		data, err := w.Redis.PopTask(context.Background())
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Worker %v Task %v Payload %v", w.ID, data.ID, data.Payload)
 	}
 }
