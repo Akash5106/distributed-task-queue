@@ -47,5 +47,7 @@ func (s *Server) HandleTasks(w http.ResponseWriter, r *http.Request) {
 	}
 	s.ID++
 	s.Queue.Enqueue(t)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(t)
 }
