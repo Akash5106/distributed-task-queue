@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/Akash5106/distributed-task-queue/internal/task"
 	"github.com/redis/go-redis/v9"
@@ -59,4 +60,24 @@ func (r *RedisClient) GenerateID(ctx context.Context) (int, error) {
 		return -1, id.Err()
 	}
 	return int(id.Val()), nil
+}
+
+func (r *RedisClient) SaveTask(ctx context.Context, t task.Task) error {
+	data, err := json.Marshal(t)
+	if err != nil {
+		return err
+	}
+	key := fmt.Sprintf("task:%v", t.ID)
+	res := r.Client.Set(ctx, key, data, 0)
+	return res.Err()
+}
+
+func (r *RedisClient) UpdateTask(ctx context.Context, t task.Task) error {
+	key := fmt.Sprintf("task:%v", t.ID)
+	data, err := json.Marshal(t)
+	if err != nil {
+		return err
+	}
+	res := r.Client.Set(ctx, key, data, 0)
+	return res.Err()
 }

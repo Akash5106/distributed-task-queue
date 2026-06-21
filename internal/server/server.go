@@ -48,6 +48,12 @@ func (s *Server) HandleTasks(w http.ResponseWriter, r *http.Request) {
 	t := task.Task{
 		ID:      id,
 		Payload: req.Payload,
+		Status:  task.Pending,
+	}
+	err = s.Redis.SaveTask(r.Context(), t)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	err = s.Redis.PushTask(r.Context(), t)
 	if err != nil {

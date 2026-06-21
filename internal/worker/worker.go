@@ -3,8 +3,10 @@ package worker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Akash5106/distributed-task-queue/internal/storage"
+	"github.com/Akash5106/distributed-task-queue/internal/task"
 )
 
 type Worker struct {
@@ -14,10 +16,22 @@ type Worker struct {
 
 func (w *Worker) Start() {
 	for {
-		data, err := w.Redis.PopTask(context.Background())
+		t, err := w.Redis.PopTask(context.Background())
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Worker %v Task %v Payload %v\n", w.ID, data.ID, data.Payload)
+		t.Status = task.Running
+		res := w.Redis.UpdateTask(context.Background(), t)
+		if res != nil {
+			panic(res)
+		}
+		fmt.Printf("Worker %v Task %v Payload %v Status %v\n", w.ID, t.ID, t.Payload, t.Status)
+		time.Sleep(5 * time.Second)
+		t.Status = task.Completed
+		res = w.Redis.UpdateTask(context.Background(), t)
+		if res != nil {
+			panic(res)
+		}
+		fmt.Printf("Worker %v Task %v Payload %v Status %v\n", w.ID, t.ID, t.Payload, t.Status)
 	}
 }
