@@ -104,3 +104,71 @@ func (r *RedisClient) PushDeadTask(ctx context.Context, t task.Task) error {
 	res := r.Client.LPush(ctx, "dead_tasks", string(data))
 	return res.Err()
 }
+
+func (r *RedisClient) GetDeadTasks(ctx context.Context) ([]task.Task, error) {
+	res := r.Client.LRange(ctx, "dead_tasks", 0, -1)
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	var tasks []task.Task
+	for _, item := range res.Val() {
+		var t task.Task
+		err := json.Unmarshal(
+			[]byte(item),
+			&t,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
+	}
+	return tasks, nil
+}
+
+func (r *RedisClient) RemoveDeadTask(
+	ctx context.Context,
+	t task.Task,
+) error {
+	data, err := json.Marshal(t)
+	if err != nil {
+		return err
+	}
+	res := r.Client.LRem(
+		ctx,
+		"dead_tasks",
+		1,
+		string(data),
+	)
+	return res.Err()
+}
+
+func (r *RedisClient) RetryDeadTask(
+	ctx context.Context,
+	t task.Task,
+) error {
+
+	err := r.RemoveDeadTask(
+		ctx,
+		t,
+	)
+	if err != nil {
+		return err
+	}
+	t.Status = task.Pending
+	t.Retries = 0
+	err = r.UpdateTask(
+		ctx,
+		t,
+	)
+	if err != nil {
+		return err
+	}
+	err = r.PushTask(
+		ctx,
+		t,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
