@@ -57,7 +57,10 @@ func (w *Worker) Start() {
 			if res != nil {
 				panic(res)
 			}
-
+			res = w.Redis.PushDeadTask(context.Background(), t)
+			if res != nil {
+				panic(res)
+			}
 			fmt.Printf(
 				"Worker %v Task %v Payload %v Status %v\n",
 				w.ID,

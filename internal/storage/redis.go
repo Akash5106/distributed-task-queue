@@ -95,3 +95,12 @@ func (r *RedisClient) GetTask(ctx context.Context, id int) (task.Task, error) {
 	}
 	return t, nil
 }
+
+func (r *RedisClient) PushDeadTask(ctx context.Context, t task.Task) error {
+	data, err := json.Marshal(t)
+	if err != nil {
+		return err
+	}
+	res := r.Client.LPush(ctx, "dead_tasks", string(data))
+	return res.Err()
+}
