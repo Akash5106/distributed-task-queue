@@ -81,3 +81,17 @@ func (r *RedisClient) UpdateTask(ctx context.Context, t task.Task) error {
 	res := r.Client.Set(ctx, key, data, 0)
 	return res.Err()
 }
+
+func (r *RedisClient) GetTask(ctx context.Context, id int) (task.Task, error) {
+	key := fmt.Sprintf("task:%v", id)
+	res := r.Client.Get(ctx, key)
+	if res.Err() != nil {
+		return task.Task{}, res.Err()
+	}
+	var t task.Task
+	data := json.Unmarshal([]byte(res.Val()), &t)
+	if data != nil {
+		return task.Task{}, data
+	}
+	return t, nil
+}

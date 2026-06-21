@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/Akash5106/distributed-task-queue/internal/storage"
 	"github.com/Akash5106/distributed-task-queue/internal/task"
@@ -23,6 +25,7 @@ func NewServer(redis *storage.RedisClient) *Server {
 func (s *Server) Start() {
 	fmt.Println("Server listening on port : 8080")
 	http.HandleFunc("/tasks", s.HandleTasks)
+	http.HandleFunc("/tasks/", s.GetTask)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal(err)
@@ -62,5 +65,26 @@ func (s *Server) HandleTasks(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(t)
+}
+
+func (s *Server) GetTask(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	id, err := strconv.Atoi(parts[2])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	t, err := s.Redis.GetTask(r.Context(), id)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(t)
 }
