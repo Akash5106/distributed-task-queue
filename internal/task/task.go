@@ -4,6 +4,7 @@ type Task struct {
 	ID      int    `json:"id"`
 	Payload string `json:"payload"`
 	Status  string `json:"status"`
+	Retries int    `json:"retries"`
 }
 
 type TaskRequest struct {

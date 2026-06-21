@@ -52,6 +52,7 @@ func (s *Server) HandleTasks(w http.ResponseWriter, r *http.Request) {
 		ID:      id,
 		Payload: req.Payload,
 		Status:  task.Pending,
+		Retries: 0,
 	}
 	err = s.Redis.SaveTask(r.Context(), t)
 	if err != nil {

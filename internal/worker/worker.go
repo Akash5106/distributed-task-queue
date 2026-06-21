@@ -27,11 +27,44 @@ func (w *Worker) Start() {
 		}
 		fmt.Printf("Worker %v Task %v Payload %v Status %v\n", w.ID, t.ID, t.Payload, t.Status)
 		time.Sleep(5 * time.Second)
-		t.Status = task.Completed
-		res = w.Redis.UpdateTask(context.Background(), t)
-		if res != nil {
-			panic(res)
+		if t.ID%2 == 0 {
+			t.Status = task.Completed
+			res = w.Redis.UpdateTask(context.Background(), t)
+			if res != nil {
+				panic(res)
+			}
+			fmt.Printf("Worker %v Task %v Payload %v Status %v\n", w.ID, t.ID, t.Payload, t.Status)
+		} else {
+			t.Retries++
+			if t.Retries < 3 {
+				t.Status = task.Pending
+				res = w.Redis.UpdateTask(context.Background(), t)
+				if res != nil {
+					panic(res)
+				}
+				res = w.Redis.PushTask(context.Background(), t)
+				if res != nil {
+					panic(res)
+				}
+				fmt.Printf("Worker %v Retrying Task %v Attempt %v\n", w.ID, t.ID, t.Retries)
+				continue
+			}
+			t.Status = task.Failed
+			res = w.Redis.UpdateTask(
+				context.Background(),
+				t,
+			)
+			if res != nil {
+				panic(res)
+			}
+
+			fmt.Printf(
+				"Worker %v Task %v Payload %v Status %v\n",
+				w.ID,
+				t.ID,
+				t.Payload,
+				t.Status,
+			)
 		}
-		fmt.Printf("Worker %v Task %v Payload %v Status %v\n", w.ID, t.ID, t.Payload, t.Status)
 	}
 }
