@@ -12,7 +12,6 @@ import (
 
 type Server struct {
 	Redis *storage.RedisClient
-	ID    int
 }
 
 func NewServer(redis *storage.RedisClient) *Server {
@@ -41,11 +40,15 @@ func (s *Server) HandleTasks(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	id, err := s.Redis.GenerateID(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	t := task.Task{
-		ID:      s.ID,
+		ID:      id,
 		Payload: req.Payload,
 	}
-	s.ID++
 	err = s.Redis.PushTask(r.Context(), t)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

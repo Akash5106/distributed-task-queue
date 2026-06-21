@@ -18,6 +18,6 @@ func (w *Worker) Start() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Worker %v Task %v Payload %v", w.ID, data.ID, data.Payload)
+		fmt.Printf("Worker %v Task %v Payload %v\n", w.ID, data.ID, data.Payload)
 	}
 }

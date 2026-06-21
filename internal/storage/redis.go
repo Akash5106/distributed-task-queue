@@ -52,3 +52,11 @@ func (r *RedisClient) PopTask(ctx context.Context) (task.Task, error) {
 	}
 	return t, nil
 }
+
+func (r *RedisClient) GenerateID(ctx context.Context) (int, error) {
+	id := r.Client.Incr(ctx, "task_id")
+	if id.Err() != nil {
+		return -1, id.Err()
+	}
+	return int(id.Val()), nil
+}
