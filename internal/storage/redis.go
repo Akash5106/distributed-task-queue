@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -16,8 +17,14 @@ type RedisClient struct {
 }
 
 func NewRedisClient() *RedisClient {
+	addr := os.Getenv("REDIS_ADDR")
+
+	if addr == "" {
+		addr = "localhost:6379"
+	}
+
 	client := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: addr,
 	})
 	return &RedisClient{
 		Client: client,

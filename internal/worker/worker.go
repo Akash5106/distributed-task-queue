@@ -20,7 +20,7 @@ func (w *Worker) Start() {
 		if err != nil {
 			panic(err)
 		}
-		if w.ID == 1 || w.ID == 2 {
+		if w.ID == 1 {
 			fmt.Println("simulating worker crash")
 			return
 		}
