@@ -20,10 +20,6 @@ func (w *Worker) Start() {
 		if err != nil {
 			panic(err)
 		}
-		if w.ID == 1 {
-			fmt.Println("simulating worker crash")
-			return
-		}
 		t.Status = task.Running
 		res := w.Redis.UpdateTask(context.Background(), t)
 		if res != nil {
