@@ -16,9 +16,13 @@ type Worker struct {
 
 func (w *Worker) Start() {
 	for {
-		t, err := w.Redis.PopTask(context.Background())
+		t, err := w.Redis.ClaimTask(context.Background())
 		if err != nil {
 			panic(err)
+		}
+		if w.ID == 1 || w.ID == 2 {
+			fmt.Println("simulating worker crash")
+			return
 		}
 		t.Status = task.Running
 		res := w.Redis.UpdateTask(context.Background(), t)
@@ -33,12 +37,20 @@ func (w *Worker) Start() {
 			if res != nil {
 				panic(res)
 			}
+			res = w.Redis.RemoveFromProcessing(context.Background(), t.ID)
+			if res != nil {
+				panic(res)
+			}
 			fmt.Printf("Worker %v Task %v Payload %v Status %v\n", w.ID, t.ID, t.Payload, t.Status)
 		} else {
 			t.Retries++
 			if t.Retries < 3 {
 				t.Status = task.Pending
 				res = w.Redis.UpdateTask(context.Background(), t)
+				if res != nil {
+					panic(res)
+				}
+				res = w.Redis.RemoveFromProcessing(context.Background(), t.ID)
 				if res != nil {
 					panic(res)
 				}
@@ -54,6 +66,10 @@ func (w *Worker) Start() {
 				context.Background(),
 				t,
 			)
+			if res != nil {
+				panic(res)
+			}
+			res = w.Redis.RemoveFromProcessing(context.Background(), t.ID)
 			if res != nil {
 				panic(res)
 			}

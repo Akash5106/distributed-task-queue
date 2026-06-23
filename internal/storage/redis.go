@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/Akash5106/distributed-task-queue/internal/task"
 	"github.com/redis/go-redis/v9"
@@ -169,6 +171,104 @@ func (r *RedisClient) RetryDeadTask(
 	)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r *RedisClient) ClaimTask(ctx context.Context) (task.Task, error) {
+	res := r.Client.BLMove(ctx, "tasks", "processing", "RIGHT", "LEFT", 0)
+	if res.Err() != nil {
+		return task.Task{}, res.Err()
+	}
+	var t task.Task
+	err := json.Unmarshal([]byte(res.Val()), &t)
+	if err != nil {
+		return task.Task{}, err
+	}
+	key := fmt.Sprintf("processing:%d", t.ID)
+	err = r.Client.Set(ctx, key, time.Now().Unix(), 0).Err()
+	if err != nil {
+		return task.Task{}, err
+	}
+	return t, nil
+}
+
+func (r *RedisClient) RemoveFromProcessing(ctx context.Context, id int) error {
+	entries, _ := r.Client.LRange(
+		ctx,
+		"processing",
+		0,
+		-1,
+	).Result()
+
+	for _, item := range entries {
+		var t task.Task
+
+		json.Unmarshal(
+			[]byte(item),
+			&t,
+		)
+		if t.ID == id {
+			res := r.Client.LRem(
+				ctx,
+				"processing",
+				1,
+				item,
+			)
+			if res.Err() != nil {
+				return res.Err()
+			}
+			err := r.Client.Del(ctx, fmt.Sprintf("processing:%v", id)).Err()
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+func (r *RedisClient) RecoverStuckTasks(ctx context.Context) error {
+	entries, err := r.Client.LRange(ctx, "processing", 0, -1).Result()
+	if err != nil {
+		return err
+	}
+	for _, item := range entries {
+		var t task.Task
+		err = json.Unmarshal([]byte(item), &t)
+		if err != nil {
+			return err
+		}
+		key := fmt.Sprintf("processing:%d", t.ID)
+		res := r.Client.Get(ctx, key)
+		if res.Err() == redis.Nil {
+			continue
+		}
+		if res.Err() != nil {
+			return res.Err()
+		}
+		claimedAt, err := strconv.Atoi(res.Val())
+		if err != nil {
+			return err
+		}
+		now := time.Now().Unix()
+		age := now - int64(claimedAt)
+		if age > 60 {
+			t.Status = task.Pending
+			err = r.UpdateTask(ctx, t)
+			if err != nil {
+				return err
+			}
+			err = r.RemoveFromProcessing(ctx, t.ID)
+			if err != nil {
+				return err
+			}
+			err = r.PushTask(ctx, t)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Recovered stuck task %d after %d\n", t.ID, age)
+		}
 	}
 	return nil
 }
