@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,12 +23,20 @@ func NewServer(redis *storage.RedisClient) *Server {
 	}
 }
 
+type Metrics struct {
+	QueuedTasks     int `json:"queued_tasks"`
+	ProcessingTasks int `json:"processing_tasks"`
+	DeadTasks       int `json:"dead_tasks"`
+	CompletedTasks  int `json:"completed_tasks"`
+}
+
 func (s *Server) Start() {
 	fmt.Println("Server listening on port : 8080")
 	http.HandleFunc("/tasks", s.HandleTasks)
 	http.HandleFunc("/tasks/", s.GetTask)
 	http.HandleFunc("/dead-tasks", s.GetDeadTasks)
 	http.HandleFunc("/dead-tasks/", s.RetryDeadTask)
+	http.HandleFunc("/metrics", s.GetMetrics)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal(err)
@@ -163,4 +172,22 @@ func (s *Server) RetryDeadTask(
 	w.WriteHeader(
 		http.StatusOK,
 	)
+}
+
+func (s *Server) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	queue, processing, dead, completed, err := s.Redis.GetMetrics(context.Background())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	m := Metrics{
+		QueuedTasks:     queue,
+		ProcessingTasks: processing,
+		DeadTasks:       dead,
+		CompletedTasks:  completed,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(m)
 }

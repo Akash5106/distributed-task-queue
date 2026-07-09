@@ -26,21 +26,15 @@ func main() {
 		}
 	}()
 	s := server.NewServer(RedisClient)
-	w1 := worker.Worker{
-		ID:    1,
-		Redis: RedisClient,
-	}
-	w2 := worker.Worker{
-		ID:    2,
-		Redis: RedisClient,
-	}
-	w3 := worker.Worker{
-		ID:    3,
-		Redis: RedisClient,
+	const workerCount = 10
+
+	for i := 1; i <= workerCount; i++ {
+		w := worker.Worker{
+			ID:    i,
+			Redis: RedisClient,
+		}
+		go w.Start()
 	}
 	go s.Start()
-	go w1.Start()
-	go w2.Start()
-	go w3.Start()
 	select {}
 }

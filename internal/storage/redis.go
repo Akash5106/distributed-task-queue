@@ -279,3 +279,28 @@ func (r *RedisClient) RecoverStuckTasks(ctx context.Context) error {
 	}
 	return nil
 }
+func (r *RedisClient) GetMetrics(ctx context.Context) (int, int, int, int, error) {
+	queue, err := r.Client.LLen(ctx, "tasks").Result()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	processing, err := r.Client.LLen(ctx, "processing").Result()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	dead, err := r.Client.LLen(ctx, "dead_tasks").Result()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	completed, err := r.Client.Get(ctx, "completed_tasks").Int()
+	if err == redis.Nil {
+		completed = 0
+	} else if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	return int(queue), int(processing), int(dead), int(completed), nil
+}

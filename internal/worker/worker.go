@@ -3,7 +3,6 @@ package worker
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/Akash5106/distributed-task-queue/internal/storage"
 	"github.com/Akash5106/distributed-task-queue/internal/task"
@@ -26,12 +25,19 @@ func (w *Worker) Start() {
 			panic(res)
 		}
 		fmt.Printf("Worker %v Task %v Payload %v Status %v\n", w.ID, t.ID, t.Payload, t.Status)
-		time.Sleep(5 * time.Second)
+		//time.Sleep(5 * time.Second)
 		if t.ID%2 == 0 {
 			t.Status = task.Completed
 			res = w.Redis.UpdateTask(context.Background(), t)
 			if res != nil {
 				panic(res)
+			}
+			err := w.Redis.Client.Incr(
+				context.Background(),
+				"completed_tasks",
+			).Err()
+			if err != nil {
+				panic(err)
 			}
 			res = w.Redis.RemoveFromProcessing(context.Background(), t.ID)
 			if res != nil {
